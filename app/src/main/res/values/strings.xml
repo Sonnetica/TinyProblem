@@ -7,4 +7,6 @@
     <string name="create_game_online">Create Game Online</string>
     <string name="enter_game_id">Enter game Id</string>
     <string name="join_game_online">Join Game Online</string>
+    <string name="next">Next</string>
+    <string name="enter_player_name">Enter a name</string>
 </resources>
