@@ -3,11 +3,13 @@ package com.example.tinyproblem
 import android.content.Intent
 import android.os.Bundle
 import android.widget.EditText
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.tinyproblem.databinding.ActivityNameBinding
+import com.google.firebase.firestore.FirebaseFirestore
 
 class NameActivity : AppCompatActivity() {
 
@@ -27,6 +29,7 @@ class NameActivity : AppCompatActivity() {
 
         }
 
+        // After clicking "next" button:
         binding.nextBtn.setOnClickListener {
             val playerName = binding.playerNameInput.text.toString() // Retrieve the player's name
 
@@ -37,17 +40,46 @@ class NameActivity : AppCompatActivity() {
                 return@setOnClickListener // Stop further execution
             }
 
+            // Send the name to Firebase and proceed to the next page
+            saveNameToFirebase(playerName)
+
             // Proceed to the next page if the name is valid
             nextPage(playerName)
+
         }
+
     }
+//    fun nextPage(playerName: String) {
+//        val n = Intent(this,MainActivity::class.java)
+//
+//        // get EditText view from activity_name.xml
+//        val playerNameET = findViewById<EditText>(R.id.player_name_input)
+//
+//        n.putExtra("keyName", playerNameET.text)
+//        startActivity(n)
+//    }
     fun nextPage(playerName: String) {
-        val n = Intent(this,MainActivity::class.java)
+        val intent = Intent(this, MainActivity::class.java)
+        intent.putExtra("keyName", playerName) // Passing player name as an extra
+        startActivity(intent)
+    }
 
-        // get EditText view from activity_name.xml
-        val playerNameET = findViewById<EditText>(R.id.player_name_input)
+    private fun saveNameToFirebase(playerName: String) {
+        // Get a reference to Firestore
+        val firestore = FirebaseFirestore.getInstance()
 
-        n.putExtra("keyName", playerNameET.text)
-        startActivity(n)
+        // Create a map to hold player data
+        val playerData = hashMapOf("name" to playerName)
+
+        // Add the data to Firestore
+        firestore.collection("players")
+            .add(playerData) // Add to "players" collection
+            .addOnSuccessListener {
+                Toast.makeText(this, "Player name saved successfully!", Toast.LENGTH_SHORT).show()
+                nextPage(playerName) // Proceed to next page if successful
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Failed to save player name: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 }

@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".GameActivity">
-
+    <!-- Title TextView -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -17,7 +17,7 @@
         android:layout_margin="8dp"
         android:layout_gravity="center"
         android:padding="8dp"/>
-
+    <!-- Game Status TextView -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -29,29 +29,14 @@
         android:text="@string/game_not_started"
         android:letterSpacing="0.04"
         android:textColor="#FF0000"/>
-
-    <GridLayout
-        android:layout_width="wrap_content"
+    <!-- Player List RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/player_list_recycler_view"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:columnCount="3">
-
-        <Button android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="8dp"
-            android:textSize="60sp"
-            android:tag="0"
-            android:id="@+id/btn_0"
-            tools:text="X"/>
-        <Button android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="8dp"
-            android:textSize="60sp"
-            android:tag="1"
-            android:id="@+id/btn_1"
-            tools:text="X"/>
-
-    </GridLayout>
-    
+        android:layout_marginTop="16dp"
+        android:padding="8dp"/>
+    <!-- Start Game Button -->
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

@@ -11,24 +11,33 @@ object GameData {
     var gameModel: LiveData<GameModel> = _gameModel
     var myID = ""
 
+    // Method to save the GameModel both locally and to Firestore
     fun saveGameModel(model: GameModel) {
-        _gameModel.postValue(model)
+        _gameModel.postValue(model) // Update local LiveData
 
-        // It will always be an online game
+        // Save to Firestore
         Firebase.firestore.collection("games")
             .document(model.gameId)
             .set(model)
     }
 
     // Method to update the game model for the lobby host's phone (Change screen to reflect appropriate layout)
-    fun fetchGameModel() {
-        gameModel.value?.apply {
+    fun fetchGameModel(gameId: String) {
+        // Check if we already have a game model in memory to avoid unnecessary fetch
+        if (_gameModel.value?.gameId != gameId) {
             Firebase.firestore.collection("games")
                 .document(gameId)
                 .addSnapshotListener { value, error ->
-                    val model = value?.toObject((GameModel::class.java))
-                    _gameModel.postValue(model)
-                }
+                    if (error != null) {
+                        // Handle errors if any
+                        return@addSnapshotListener
+                    }
+
+                    val model = value?.toObject(GameModel::class.java)
+                    if (model != null) {
+                        _gameModel.postValue(model)  // Update LiveData with fetched game model
+                    }
+            }
         }
     }
 }

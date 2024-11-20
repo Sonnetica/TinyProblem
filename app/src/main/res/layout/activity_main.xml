@@ -19,14 +19,6 @@
         android:layout_margin="8dp"
         android:padding="8dp"/>
 
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/play_offline_btn"
-        android:text="@string/play_offline"
-        android:layout_margin="8dp"
-        android:padding="8dp"/>
-
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

@@ -1,6 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30"/>
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30"/>
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30"/>
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30"/>
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s"/>
+
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
 
     <application
         android:allowBackup="true"
@@ -12,18 +34,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TinyProblem"
         tools:targetApi="31">
+
         <activity
             android:name=".MainActivity"
             android:exported="false" />
         <activity
-            android:name=".GameModel"
+            android:name=".GameActivity"
             android:exported="false" />
         <activity
             android:name=".GameData"
-            android:exported="false" />
+            android:exported="false"
+            tools:ignore="Instantiatable" />
         <activity
             android:name=".GameActivity"
-            android:exported="false" />
+            android:exported="false"
+            tools:ignore="DuplicateActivity" />
         <activity
             android:name=".NameActivity"
             android:exported="true">
