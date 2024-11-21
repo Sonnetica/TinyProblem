@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission
         android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30"/>
+        android:maxSdkVersion="30" />
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30"/>
+        android:maxSdkVersion="30" />
     <uses-permission
         android:name="android.permission.ACCESS_COARSE_LOCATION"
-        android:maxSdkVersion="30"/>
+        android:maxSdkVersion="30" />
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30"/>
+        android:maxSdkVersion="30" />
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"
-        tools:targetApi="s"/>
-
+        tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <uses-feature
@@ -34,29 +34,34 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TinyProblem"
         tools:targetApi="31">
+        <activity
+            android:name=".MainBluetooth"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
+        <!-- Other activities -->
+        <activity
+            android:name=".ResultsActivity"
+            android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="false" />
         <activity
             android:name=".GameActivity"
-            android:exported="false" />
+            android:exported="false"
+            tools:ignore="DuplicateActivity" />
         <activity
             android:name=".GameData"
             android:exported="false"
             tools:ignore="Instantiatable" />
         <activity
-            android:name=".GameActivity"
-            android:exported="false"
-            tools:ignore="DuplicateActivity" />
-        <activity
             android:name=".NameActivity"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            <!-- Remove the intent-filter from here -->
         </activity>
     </application>
 
