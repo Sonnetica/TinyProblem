@@ -187,6 +187,32 @@ class GameActivity : AppCompatActivity() {
     fun startGameForHost(gameId: String) {
         gameModel?.apply {
             if (gameStatus == GameStatus.CREATED || gameStatus == GameStatus.JOINED) {
+                // Validate Hiders and Seekers input
+                val hiderInput = binding.hiderInput.text.toString()
+                val seekerInput = binding.seekerInput.text.toString()
+
+                val hiderCount = hiderInput.toIntOrNull()
+                val seekerCount = seekerInput.toIntOrNull()
+
+                if (hiderInput.isEmpty() || seekerInput.isEmpty() || hiderCount == null || seekerCount == null) {
+                    Toast.makeText(
+                        this@GameActivity,
+                        "Please provide valid numbers for Hiders and Seekers.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+
+                if (hiderCount + seekerCount != playersList.size) {
+                    Toast.makeText(
+                        this@GameActivity,
+                        "The total of Hiders and Seekers must equal the number of players (${playersList.size}).",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+
+                // Proceed with starting the game
                 val currentTime = System.currentTimeMillis()
                 val hidingTimerDuration = this.hidingTimerDuration ?: 60000 // Default to 60 seconds
                 val secondTimerDuration = this.secondTimerDuration ?: 60000 // Default to 60 seconds

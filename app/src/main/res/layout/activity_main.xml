@@ -32,7 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/create_online_game_btn"
-        android:text="@string/create_game_online"
+        android:text="@string/create_lobby"
         android:layout_margin="8dp"
         android:padding="8dp"/>
 
@@ -61,7 +61,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/join_online_game_btn"
-        android:text="@string/join_game_online"
+        android:text="@string/join_lobby"
         android:layout_margin="8dp"
         android:padding="8dp"/>
 
