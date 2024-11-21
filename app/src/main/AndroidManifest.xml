@@ -45,9 +45,6 @@
 
         <!-- Other activities -->
         <activity
-            android:name=".ResultsActivity"
-            android:exported="false" />
-        <activity
             android:name=".MainActivity"
             android:exported="false" />
         <activity

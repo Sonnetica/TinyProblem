@@ -37,8 +37,19 @@ class GameActivity : AppCompatActivity() {
                 if (timerInput.isNotEmpty()) {
                     val timerDuration = timerInput.toLongOrNull()
                     if (timerDuration != null && timerDuration > 0) {
-                        setLobbyTimer(timerDuration)
-                        Toast.makeText(this, "Timer set for $timerDuration seconds", Toast.LENGTH_SHORT).show()
+                        // Save the timer duration instead of the end time
+                        gameId?.let { id ->
+                            firestore.collection("games").document(id)
+                                .update("hidingTimerDuration", timerDuration * 1000) // Save in milliseconds
+                                .addOnSuccessListener {
+                                    Log.d("GameActivity", "Timer duration saved: $timerDuration seconds.")
+                                    Toast.makeText(this, "Timer set for $timerDuration seconds", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("GameActivity", "Error setting timer: ${e.message}")
+                                    Toast.makeText(this, "Failed to set timer", Toast.LENGTH_SHORT).show()
+                                }
+                        }
                     } else {
                         Toast.makeText(this, "Enter a valid duration in seconds", Toast.LENGTH_SHORT).show()
                     }
@@ -51,13 +62,23 @@ class GameActivity : AppCompatActivity() {
         }
 
         binding.setSecondTimerBtn.setOnClickListener {
-            if (playersList.isNotEmpty() && playersList[0] == playerName) {
+            if (playersList.isNotEmpty() && playersList[0] == playerName) { // Check if host
                 val secondTimerInput = binding.secondTimerInput.text.toString()
                 if (secondTimerInput.isNotEmpty()) {
                     val duration = secondTimerInput.toLongOrNull()
                     if (duration != null && duration > 0) {
-                        secondTimerDuration = duration * 1000 // Convert to milliseconds
-                        Toast.makeText(this, "Second timer set for $duration seconds", Toast.LENGTH_SHORT).show()
+                        gameId?.let { id ->
+                            firestore.collection("games").document(id)
+                                .update("secondTimerDuration", duration * 1000) // Save duration in milliseconds
+                                .addOnSuccessListener {
+                                    Log.d("GameActivity", "Second timer set: $duration seconds.")
+                                    Toast.makeText(this, "Second timer set for $duration seconds", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("GameActivity", "Error setting second timer: ${e.message}")
+                                    Toast.makeText(this, "Failed to set second timer", Toast.LENGTH_SHORT).show()
+                                }
+                        }
                     } else {
                         Toast.makeText(this, "Enter a valid duration in seconds", Toast.LENGTH_SHORT).show()
                     }
@@ -66,6 +87,56 @@ class GameActivity : AppCompatActivity() {
                 }
             } else {
                 Toast.makeText(this, "Only the host can set the second timer!", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Set the click listener on the button for hider and seeker
+        binding.setHiderSeekerBtn.setOnClickListener {
+            // Get the text from the EditTexts
+            val hiderText = binding.hiderInput.text.toString()
+            val seekerText = binding.seekerInput.text.toString()
+
+            // Check if the current player is the host (assuming host is the first player in playersList)
+            if (playersList.isNotEmpty() && playersList[0] == playerName) {
+                // Host can set the numbers
+                if (hiderText.isNotEmpty() && seekerText.isNotEmpty()) {
+                    // Convert the text inputs to numbers
+                    val hiderNumber = hiderText.toIntOrNull()
+                    val seekerNumber = seekerText.toIntOrNull()
+
+                    // Check if the inputs are valid integers
+                    if (hiderNumber != null && seekerNumber != null) {
+                        val totalPlayers = playersList.size // Total players in the lobby
+
+                        // Validate if the sum of hider and seeker equals totalPlayers
+                        if (hiderNumber + seekerNumber == totalPlayers) {
+                            // Display the valid result
+                            Toast.makeText(
+                                this,
+                                "Hider: $hiderNumber, Seeker: $seekerNumber - Valid Input!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            // Proceed with the game logic (start game, etc.)
+                        } else {
+                            // Show an error if the sum is not equal to totalPlayers
+                            Toast.makeText(
+                                this,
+                                "Hider and Seeker must add up to $totalPlayers.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    } else {
+                        // Show an error if the inputs are not valid numbers
+                        Toast.makeText(this, "Please enter valid numbers", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    // Show an error if any of the inputs are empty
+                    Toast.makeText(this, "Please enter both Hider and Seeker numbers", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                // Show an error if the current player is not the host
+                Toast.makeText(this, "Only the host can set the number of hiders and seekers", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -116,17 +187,36 @@ class GameActivity : AppCompatActivity() {
     fun startGameForHost(gameId: String) {
         gameModel?.apply {
             if (gameStatus == GameStatus.CREATED || gameStatus == GameStatus.JOINED) {
-                // Retrieve timer duration from user input or default to 60 seconds
-                val timerInput = binding.timerInput.text.toString().toLongOrNull()
-                val hidingPhaseEndTime = System.currentTimeMillis() + (timerInput?.times(1000) ?: 60000) // Default: 60s
+                val currentTime = System.currentTimeMillis()
+                val hidingTimerDuration = this.hidingTimerDuration ?: 60000 // Default to 60 seconds
+                val secondTimerDuration = this.secondTimerDuration ?: 60000 // Default to 60 seconds
 
+                // Calculate end times using epoch time
+                val hidingPhaseEndTime = currentTime + hidingTimerDuration
+                val secondTimerEndTime = hidingPhaseEndTime + secondTimerDuration
+
+                // Update game model
                 val updatedGameModel = this.copy(
                     gameStatus = GameStatus.INPROGRESS,
-                    hidingPhaseEndTime = hidingPhaseEndTime
+                    hidingPhaseEndTime = hidingPhaseEndTime,
+                    secondTimerEndTime = secondTimerEndTime
                 )
 
-                updateGameData(updatedGameModel) // Save updated game state to Firestore
-                Toast.makeText(this@GameActivity, "Game started with hiding phase!", Toast.LENGTH_SHORT).show()
+                // Save to Firestore
+                firestore.collection("games").document(gameId)
+                    .set(updatedGameModel)
+                    .addOnSuccessListener {
+                        Log.d("GameActivity", "Game started with synchronized timers.")
+                        Toast.makeText(this@GameActivity, "Game started!", Toast.LENGTH_SHORT).show()
+
+                        // Update local gameModel and UI for the host
+                        this@GameActivity.gameModel = updatedGameModel
+                        setUI() // Update the UI after the game state changes
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("GameActivity", "Error starting game: ${e.message}")
+                        Toast.makeText(this@GameActivity, "Failed to start game.", Toast.LENGTH_SHORT).show()
+                    }
             } else {
                 Toast.makeText(this@GameActivity, "Game cannot be started in the current state.", Toast.LENGTH_SHORT).show()
             }
@@ -138,14 +228,23 @@ class GameActivity : AppCompatActivity() {
     // Set UI for displaying the game state and lobby details
     fun setUI() {
         gameModel?.apply {
-            // Update the visibility of buttons
-            binding.startGameBtn.visibility = if (gameStatus in listOf(GameStatus.CREATED, GameStatus.JOINED)) View.VISIBLE else View.INVISIBLE
+            // Check if the current player is the host
+            val isHost = playersList.isNotEmpty() && playersList[0] == playerName
+            val isGameInProgress = gameStatus == GameStatus.INPROGRESS
             val showTimerControls = gameStatus in listOf(GameStatus.CREATED, GameStatus.JOINED)
-            binding.setTimerBtn.visibility = if (showTimerControls) View.VISIBLE else View.GONE
-            binding.timerInput.visibility = if (showTimerControls) View.VISIBLE else View.GONE
 
-            // Update timer text
-            val timerText = when (gameStatus) {
+            // Show or hide elements based on the game status and whether the player is the host
+            binding.startGameBtn.visibility = if (showTimerControls && isHost) View.VISIBLE else View.GONE
+            binding.setTimerBtn.visibility = if (showTimerControls && isHost) View.VISIBLE else View.GONE
+            binding.timerInput.visibility = if (showTimerControls && isHost) View.VISIBLE else View.GONE
+            binding.setSecondTimerBtn.visibility = if (showTimerControls && isHost) View.VISIBLE else View.GONE
+            binding.secondTimerInput.visibility = if (showTimerControls && isHost) View.VISIBLE else View.GONE
+            binding.setHiderSeekerBtn.visibility = if (showTimerControls && isHost) View.VISIBLE else View.GONE
+            binding.hiderInput.visibility = if (showTimerControls && isHost) View.VISIBLE else View.GONE
+            binding.seekerInput.visibility = if (showTimerControls && isHost) View.VISIBLE else View.GONE
+
+            // Update the timer text
+            binding.timerText.text = when (gameStatus) {
                 GameStatus.CREATED, GameStatus.JOINED -> "Waiting to start..."
                 GameStatus.INPROGRESS -> {
                     val remainingTime = hidingPhaseEndTime?.let { (it - System.currentTimeMillis()) / 1000 }
@@ -158,9 +257,8 @@ class GameActivity : AppCompatActivity() {
                 GameStatus.FINISHED -> "Game Over"
                 else -> ""
             }
-            binding.timerText.text = timerText
 
-            // Update game status text
+            // Update the game status text
             binding.gameStatusText.text = when (gameStatus) {
                 GameStatus.CREATED -> "Lobby Code: $gameId\nPlayers: ${playersList.size}/6\nWaiting to start..."
                 GameStatus.JOINED -> "Lobby Code: $gameId\nWaiting for players (${playersList.size}/6)..."
@@ -295,45 +393,47 @@ class GameActivity : AppCompatActivity() {
             firestore.collection("games").document(id)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
-                        Log.e("GameActivity", "Error listening for timer changes: ${error.message}")
+                        Log.e("GameActivity", "Error listening for timers: ${error.message}")
                         return@addSnapshotListener
                     }
 
-                    snapshot?.toObject(GameModel::class.java)?.let { model ->
+                    // Ensure snapshot is not null
+                    val model = snapshot?.toObject(GameModel::class.java)
+                    if (model != null) {
+                        this.gameModel = model // Update local gameModel for all players, including the host
+                        setUI() // Refresh the UI based on the game status
+
                         val currentTime = System.currentTimeMillis()
 
-                        if (model.gameStatus == GameStatus.INPROGRESS) {
-                            val remainingTime = model.hidingPhaseEndTime?.let { it - currentTime }
-                                ?: 60000 // Default to 60 seconds if no timer is set
+                        // Update secondTimerDuration
+                        secondTimerDuration = model.secondTimerDuration ?: 60000 // Default to 60 seconds if null
 
-                            if (remainingTime > 0) {
-                                startCountdownTimer(remainingTime)
+                        if (model.gameStatus == GameStatus.INPROGRESS) {
+                            // Start the first timer (hiding phase)
+                            val hidingTimeRemaining = model.hidingPhaseEndTime?.minus(currentTime)
+                            if (hidingTimeRemaining != null && hidingTimeRemaining > 0) {
+                                startCountdownTimer(hidingTimeRemaining)
                             } else {
-                                binding.timerText.text = "Hiding phase over! Seeking begins."
+                                // If the hiding phase is over, start the seeking timer
+                                val seekingTimeRemaining = model.secondTimerEndTime?.minus(currentTime)
+                                if (seekingTimeRemaining != null && seekingTimeRemaining > 0) {
+                                    startSecondCountdownTimer(seekingTimeRemaining)
+                                } else {
+                                    // Both timers are finished
+                                    binding.timerText.text = "Time's up! Hiders won!"
+                                    countDownTimer?.cancel()
+                                    secondCountDownTimer?.cancel()
+                                }
                             }
                         } else {
-                            countDownTimer?.cancel()
+                            // If the game is not in progress, reset the UI and stop timers
                             binding.timerText.text = "Waiting to start..."
+                            countDownTimer?.cancel()
+                            secondCountDownTimer?.cancel()
                         }
                     }
                 }
         }
-    }
-
-    private fun startSecondCountdownTimer(durationMillis: Long) {
-        secondCountDownTimer?.cancel() // Cancel any existing second timer
-        secondCountDownTimer = object : CountDownTimer(durationMillis, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                val secondsLeft = millisUntilFinished / 1000
-                binding.timerText.text = "Time Left for hiders: $secondsLeft seconds remaining"
-            }
-
-            override fun onFinish() {
-                binding.timerText.text = "Times up! Hider's won!"
-                // Handle post-second-timer logic here
-            }
-        }
-        secondCountDownTimer?.start()
     }
 
     private fun startCountdownTimer(durationMillis: Long) {
@@ -345,14 +445,28 @@ class GameActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
-                binding.timerText.text = "Hiding phase over! Second timer starting..."
-                // Start the second timer if it is set
-                secondTimerDuration?.let {
-                    startSecondCountdownTimer(it)
-                }
+                binding.timerText.text = "Hiding phase over! Starting second timer..."
+                // Start the second timer
+                val safeSecondDuration = secondTimerDuration ?: 60000 // Default to 60 seconds
+                startSecondCountdownTimer(safeSecondDuration)
             }
         }
         countDownTimer?.start()
+    }
+
+    private fun startSecondCountdownTimer(durationMillis: Long) {
+        secondCountDownTimer?.cancel() // Cancel any existing second timer
+        secondCountDownTimer = object : CountDownTimer(durationMillis, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val secondsLeft = millisUntilFinished / 1000
+                binding.timerText.text = "Seeking time left: $secondsLeft seconds"
+            }
+
+            override fun onFinish() {
+                binding.timerText.text = "Time's up! Hiders won!"
+            }
+        }
+        secondCountDownTimer?.start()
     }
 
     private fun updatePlayerListUI() {

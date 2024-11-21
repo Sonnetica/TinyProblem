@@ -112,13 +112,16 @@ class MainActivity : AppCompatActivity() {
                         return@addOnSuccessListener
                     }
 
+                    // Create a mutable copy of the players list
+                    val updatedPlayers = game.players.toMutableList().apply {
+                        if (!contains(playerName)) {
+                            add(playerName)
+                        }
+                    }
+
                     // Update the players list and gameStatus
                     val updatedGame = game.copy(
-                        players = game.players.apply {
-                            if (!contains(playerName)) {
-                                add(playerName)
-                            }
-                        },
+                        players = updatedPlayers,
                         gameStatus = GameStatus.JOINED
                     )
 

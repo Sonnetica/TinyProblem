@@ -2,12 +2,13 @@ package com.example.tinyproblem
 
 data class GameModel(
     val gameId: String = "",
-    val players: MutableList<String> = mutableListOf(),
     val gameStatus: GameStatus = GameStatus.CREATED,
-    val hidingPhaseEndTime: Long? = null, // Add this property
-    val seekingPhaseEndTime: Long? = null // Add seeking phase if needed
+    val hidingPhaseEndTime: Long? = null,
+    val hidingTimerDuration: Long? = null, // Add this field
+    val secondTimerEndTime: Long? = null,
+    val secondTimerDuration: Long? = null,
+    val players: List<String> = listOf()
 )
-
 
 enum class GameStatus{
     CREATED,
