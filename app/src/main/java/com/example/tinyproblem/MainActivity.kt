@@ -19,6 +19,8 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var binding: ActivityMainBinding
 
+
+
     override fun onResume() {
         super.onResume()
         binding.joinOnlineGameBtn.isEnabled = true

@@ -1,33 +1,27 @@
 package com.example.tinyproblem
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import android.widget.ArrayAdapter
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.tinyproblem.databinding.ActivityMainBluetoothBinding
 import com.google.android.material.snackbar.Snackbar
-
 
 @SuppressLint("MissingPermission")
 class MainBluetooth : AppCompatActivity() {
@@ -43,8 +37,6 @@ class MainBluetooth : AppCompatActivity() {
         .build()
 
     private lateinit var binding: ActivityMainBluetoothBinding
-
-    private lateinit var bluetoothGatt: BluetoothGatt
 
     private var isScanning = false
         set(value) {
@@ -70,6 +62,19 @@ class MainBluetooth : AppCompatActivity() {
 
     private lateinit var arrayAdapter: ArrayAdapter<*>
 
+    private var bluetoothLeConnection: BluetoothLeConnection? = null
+
+    private val serviceConnection: ServiceConnection = object: ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            bluetoothLeConnection = (service as BluetoothLeConnection.LocalBinder).getService()
+            bluetoothLeConnection?.initialize()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            bluetoothLeConnection = null
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -90,8 +95,7 @@ class MainBluetooth : AppCompatActivity() {
             insets
         }
 
-        val bleService = startService(Intent(baseContext, BluetoothConnection::class.java))
-        logMessage("bleService ${bleService.toString()}")
+        startService()
 
         // get required bluetooth manager, adapter, and BLE scanner.
         bluetoothManager = this.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -105,8 +109,9 @@ class MainBluetooth : AppCompatActivity() {
 
         // disconnect button
         binding.disconnectButton.setOnClickListener{
-            if (hasRequiredBluetoothPermissions())
-                bluetoothGatt.disconnect()
+            if (hasRequiredBluetoothPermissions()) {
+                bluetoothLeConnection?.disconnect()
+            }
         }
 
         // play button
@@ -126,8 +131,14 @@ class MainBluetooth : AppCompatActivity() {
             // when user clicks on device
             stopBLEScan()
 
-            // connect to device
-            bluetoothGatt = scanResults[position].device.connectGatt(this, false, gattCallback)
+            val connected = bluetoothLeConnection!!.connect(scanResults[position].device.address.toString())
+
+            if (connected) {
+                logMessage("device connected")
+                Intent(this, NameActivity::class.java).also {
+                    startActivity(it)
+                }
+            }
         }
 
     }
@@ -137,21 +148,17 @@ class MainBluetooth : AppCompatActivity() {
         if (!bluetoothAdapter.isEnabled) {
             promptEnableBluetooth()
         }
+    }
 
-        if (this::bluetoothGatt.isInitialized) {
-            logMessage("bluetoothGatt.device.bondState: ${bluetoothGatt.device.bondState}")
+    private fun startService() {
+        val bleServiceIntent = Intent(this, BluetoothLeConnection::class.java)
 
-            if (bluetoothGatt.device.bondState == BluetoothDevice.BOND_NONE) {
-                deviceIsConnected = false
-            }
+        // connect to device
+        if (bindService(bleServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE)) {
+            logMessage("service is bounded")
         } else {
-            logMessage("bluetoothGatt.device.bondState have been destroyed or not initialized")
+            logMessage("something went wrong")
         }
-//        logMessage("bluetoothGatt.device.bondState: ${bluetoothGatt.device.bondState}")
-//
-//        if (bluetoothGatt.device.bondState == BluetoothDevice.BOND_NONE) {
-//            deviceIsConnected = false
-//        }
     }
 
     private fun startBLEScan() {
@@ -223,32 +230,6 @@ class MainBluetooth : AppCompatActivity() {
         override fun onScanFailed(errorCode: Int) {
             super.onScanFailed(errorCode)
             logMessage("Scan failed")
-        }
-    }
-
-    private val gattCallback = object: BluetoothGattCallback() {
-        @SuppressLint("MissingPermission")
-        override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-            super.onConnectionStateChange(gatt, status, newState)
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                // successfully connected to GATT server
-                val discoveredServices = gatt?.discoverServices()
-
-                logMessage("discovered services: " + discoveredServices.toString())
-
-                runOnUiThread {
-                    Snackbar.make(binding.root, "Connected to ${gatt?.device?.name}", Snackbar.LENGTH_SHORT).show()
-                }
-
-                deviceIsConnected = true
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                // disconnected from GATT server
-                runOnUiThread {
-                    Snackbar.make(binding.root, "Disconnected", Snackbar.LENGTH_SHORT).show()
-                }
-
-                deviceIsConnected = false
-            }
         }
     }
 }
